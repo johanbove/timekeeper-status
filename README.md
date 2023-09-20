@@ -2,6 +2,8 @@
 
 Simple Web frontend using Earthstar showing the user status and some of the last journal entries.
 
+<https://earthstar-project.org/docs/>
+
 ## Start
 
     npx live-server .
