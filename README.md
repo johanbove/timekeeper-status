@@ -4,6 +4,12 @@ Simple Web frontend using Earthstar showing the user status and some of the last
 
 <https://earthstar-project.org/docs/>
 
+The JavaScript code is deliberately kept basic, no frameworks.
+
+## Guidelines
+
+Code is formatted using "deno fmt".
+
 ## Start
 
     npx live-server .
@@ -22,7 +28,6 @@ In no particular order.
 - [ ] Add custom prompts for asking for server and share address.
 - [ ] Render Time Reports and Timesheet.
 - [ ] Clean up the source code with better structuring.
-- [ ] Switch to TypeScript (?)
 - [ ] Journal: Add pagination to the "Journal".
 - [ ] Journal: Allow for period filtering.
 - [ ] Status: show timestamp of last status update.
