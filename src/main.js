@@ -208,80 +208,89 @@ const app = () => {
     return peer.sync(THESERVER, LIVE);
   }
 
-  let syncer = initPeerSyncer(replica);
-
-  console.log('syncer', syncer);
-
   const checkSyncerPartner = async (syncer) => {
     const partner = syncer.partner;
     console.log('partner.isSecure', partner.isSecure);
   }
 
-  checkSyncerPartner(syncer);
+  const syncerOnStatusChange = (syncer) => {
+    console.log('syncerOnStatusChange', syncer);
+    checkSyncerPartner(syncer);
 
-  syncer.onStatusChange(async (newStatus) => {
-    dataError(false);
-    console.log('syncer.onStatusChange', newStatus);
+    syncer.onStatusChange(async (newStatus) => {
+      dataError(false);
+      console.log('syncer.onStatusChange', newStatus);
+  
+      let allRequestedDocs = 0;
+      let allReceivedDocs = 0;
+      let allSentDocs = 0;
+      let transfersInProgress = 0;
 
-    let allRequestedDocs = 0;
-    let allReceivedDocs = 0;
-    let allSentDocs = 0;
-    let transfersInProgress = 0;
-    try {
-      for (const share in newStatus) {
-        console.log('status update on share', share);
-        const shareStatus = newStatus[share];
-        allRequestedDocs += shareStatus.docs.requestedCount;
-        allReceivedDocs += shareStatus.docs.receivedCount;
-        allSentDocs += shareStatus.docs.sentCount;
-        const docsStatus = shareStatus.docs.status;
-        console.log('docsStatus', docsStatus);
-
-        const transfersWaiting = shareStatus.attachments.filter((transfer) => {
-          return transfer.status === "ready" || transfer.status === "in_progress";
-        });
-        transfersInProgress += transfersWaiting.length;
-
-        if (docsStatus === 'aborted' && transfersInProgress === 0) {
-          console.log('Websocket aborted?', 'transfersInProgress', transfersInProgress);
-          await replica.close(false);
-          console.log('closed replica?', replica.isClosed());
-          replica = initReplica();
-          syncer = initPeerSyncer(replica);
+      try {
+        for (const share in newStatus) {
+          console.log('status update on share', share);
+          const shareStatus = newStatus[share];
+          allRequestedDocs += shareStatus.docs.requestedCount;
+          allReceivedDocs += shareStatus.docs.receivedCount;
+          allSentDocs += shareStatus.docs.sentCount;
+          const docsStatus = shareStatus.docs.status;
+          console.log('docsStatus', docsStatus);
+  
+          const transfersWaiting = shareStatus.attachments.filter((transfer) => {
+            return transfer.status === "ready" || transfer.status === "in_progress";
+          });
+          transfersInProgress += transfersWaiting.length;
+  
+          if (docsStatus === 'aborted' && transfersInProgress === 0) {
+            console.log('Websocket aborted?', 'transfersInProgress', transfersInProgress);
+            await replica.close(false);
+            console.log('closed replica?', replica.isClosed());
+            // @TODO simply call init() again?
+            replica = initReplica();
+            syncer = initPeerSyncer(replica);
+            syncerOnStatusChange(syncer);
+          }
         }
-      }
-      console.log(
-        `Syncing ${Object.keys(newStatus).length
-        } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
-      );
-      if (allReceivedDocs < allRequestedDocs) {
-        dataLoading();
-      } else {
+        console.log(
+          `Syncing ${Object.keys(newStatus).length
+          } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
+        );
+        if (allReceivedDocs < allRequestedDocs) {
+          dataLoading();
+        } else {
+          dataReady();
+        }
+        await getStatusDoc(replica);
+        await renderJournal(replica);
+      } catch (error) {
         dataReady();
+        // @TODO Try to reconnect?
+        if (error === "Websocket error") {
+          console.log('Websocket error', 'should try to reconnect...');
+        }
+        dataError(true);
+        console.error(error);
       }
-      await getStatusDoc(replica);
-      await renderJournal(replica);
-    } catch (error) {
-      dataReady();
-      // @TODO Try to reconnect?
-      if (error === "Websocket error") {
-        console.log('Websocket error', 'should try to reconnect...');
-      }
-      dataError(true);
-      console.error(error);
-    }
-  });
+    });
+  }
 
   /**
    * Initial sync
    */
   const init = async () => {
+    const syncer = initPeerSyncer(replica);
+
+    syncerOnStatusChange(syncer);
+
     await getStatusDoc(replica);
     await renderJournal(replica);
+    
     dataReady();
+    
     // this only works with appetite "once"
     await syncer.isDone();
     console.log("SYNCED!");
+
     await replica.close(false);
   };
 

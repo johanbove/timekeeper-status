@@ -31,6 +31,72 @@ const dataError = (show) => {
 }
 
 /**
+   * Renders the journal to the HTML
+   */
+const renderJournal = async (replica) => {
+  const LIMIT = -1000;
+
+  const journalEl = document.getElementById("journal");
+  const journalEntriesLengthEl = document.getElementById(
+    "journalEntriesLength",
+  );
+  const journal = await replica.queryDocs({
+    historyMode: "latest",
+    filter: {
+      // Take only the files for each month, not the individual entries
+      // 202 ... 2023, 2024, ...
+      pathStartsWith: "/timekeeper/1.0/journal/202",
+    },
+  });
+  if (journalEl) {
+    journalEl.innerHTML = "";
+  }
+  if (!journal) {
+    return;
+  }
+  // Parse the text files
+  const theJournalData = [];
+  const fileEntries = [];
+  for (const file of journal) {
+    fileEntries.push(file.text.split(/\r?\n/).filter((element) => element));
+  }
+  fileEntries.forEach((entries) => {
+    entries.forEach((entry) => {
+      theJournalData.push(entry);
+    });
+  });
+  // Show last x entries
+  const _entries = theJournalData?.slice(LIMIT).reverse();
+  if (journalEntriesLengthEl) {
+    if (Math.abs(LIMIT) < theJournalData.length) {
+      journalEntriesLengthEl.innerText = `${Math.abs(LIMIT)
+        } of ${theJournalData.length} entries`;
+    } else {
+      journalEntriesLengthEl.innerText = `${theJournalData.length} entries`;
+    }
+  }
+  _entries.forEach((entry) => {
+    const _entry = entry.split(/\t/);
+    const _date = new Date(parseInt(_entry[0], 10));
+    const node = document.createElement("li");
+    const dateNode = document.createElement("div");
+    dateNode.classList.add("entry-date");
+    const textNode = document.createElement("div");
+    textNode.classList.add("entry-content");
+    dateNode.innerText = new Intl.DateTimeFormat("en-gb", {
+      dateStyle: "full",
+      timeStyle: "medium",
+    }).format(_date);
+    textNode.innerText = _entry[1];
+    node.appendChild(dateNode);
+    node.appendChild(textNode);
+    if (journalEl) {
+      journalEl.appendChild(node);
+    }
+  });
+};
+
+/**
  * Requests and stores the address of the share and server to sync with
  * @param {*} opts 
  * @returns 
@@ -79,15 +145,11 @@ const app = () => {
    */
   const AUTHOR = "@joe1.b3nemplqj3wowds7vqeu5nnrf6yv6co3bnncv64peywoyvv7lpw3a";
   const statusPath = `/about/1.0/~${AUTHOR}/status`;
-  const LIMIT = -1000;
 
   const { share, server } = getSettings({ author: AUTHOR });
 
   const THESHARE = share;
   const THESERVER = server;
-
-  // console.log('settings', settings);
-  // console.log('AUTHOR', AUTHOR);
 
   const initReplica = () => {
     console.log('init a replica', THESHARE)
@@ -107,7 +169,6 @@ const app = () => {
    */
   const getStatusDoc = async (replica) => {
     const replicaStatus = await replica.getLatestDocAtPath(statusPath);
-    // console.log('replicaStatus', replicaStatus);
     if (replicaStatus) {
       renderStatus(replicaStatus?.text);
     }
@@ -115,76 +176,9 @@ const app = () => {
 
   const rtStatus = async (cache) => {
     const cacheStatus = await cache.getLatestDocAtPath(statusPath);
-    // console.log('cacheStatus', cacheStatus);
     if (cacheStatus) {
       renderStatus(cacheStatus?.text);
     }
-  };
-
-  /**
-   * Renders the journal to the HTML
-   */
-  const renderJournal = async (replica) => {
-    const journalEl = document.getElementById("journal");
-    const journalEntriesLengthEl = document.getElementById(
-      "journalEntriesLength",
-    );
-    const journal = await replica.queryDocs({
-      historyMode: "latest",
-      filter: {
-        // Take only the files for each month, not the individual entries
-        // 202 ... 2023, 2024, ...
-        pathStartsWith: "/timekeeper/1.0/journal/202",
-      },
-    });
-    // console.log('renderJournal', journal);
-    if (journalEl) {
-      journalEl.innerHTML = "";
-    }
-    if (!journal) {
-      return;
-    }
-    // Parse the text files
-    const theJournalData = [];
-    const fileEntries = [];
-    for (const file of journal) {
-      fileEntries.push(file.text.split(/\r?\n/).filter((element) => element));
-    }
-    fileEntries.forEach((entries) => {
-      entries.forEach((entry) => {
-        theJournalData.push(entry);
-      });
-    });
-    // Show last x entries
-    const _entries = theJournalData?.slice(LIMIT).reverse();
-    if (journalEntriesLengthEl) {
-      if (Math.abs(LIMIT) < theJournalData.length) {
-        journalEntriesLengthEl.innerText = `${Math.abs(LIMIT)
-          } of ${theJournalData.length} entries`;
-      } else {
-        journalEntriesLengthEl.innerText = `${theJournalData.length} entries`;
-      }
-    }
-    _entries.forEach((entry) => {
-      const _entry = entry.split(/\t/);
-      const _date = new Date(parseInt(_entry[0], 10));
-      const node = document.createElement("li");
-      const dateNode = document.createElement("div");
-      dateNode.classList.add("entry-date");
-      const textNode = document.createElement("div");
-      textNode.classList.add("entry-content");
-      // textNode.classList.add('is-three-quarters');
-      dateNode.innerText = new Intl.DateTimeFormat("en-gb", {
-        dateStyle: "full",
-        timeStyle: "medium",
-      }).format(_date);
-      textNode.innerText = _entry[1];
-      node.appendChild(dateNode);
-      node.appendChild(textNode);
-      if (journalEl) {
-        journalEl.appendChild(node);
-      }
-    });
   };
 
   const initCache = (replica) => {
@@ -214,79 +208,89 @@ const app = () => {
     return peer.sync(THESERVER, LIVE);
   }
 
-  const syncer = initPeerSyncer(replica);
-
-  console.log('syncer', syncer);
-
   const checkSyncerPartner = async (syncer) => {
     const partner = syncer.partner;
     console.log('partner.isSecure', partner.isSecure);
   }
 
-  checkSyncerPartner(syncer);
+  const syncerOnStatusChange = (syncer) => {
+    console.log('syncerOnStatusChange', syncer);
+    checkSyncerPartner(syncer);
 
-  syncer.onStatusChange(async (newStatus) => {
-    dataError(false);
-    console.log('syncer.onStatusChange', newStatus);
+    syncer.onStatusChange(async (newStatus) => {
+      dataError(false);
+      console.log('syncer.onStatusChange', newStatus);
+  
+      let allRequestedDocs = 0;
+      let allReceivedDocs = 0;
+      let allSentDocs = 0;
+      let transfersInProgress = 0;
 
-    let allRequestedDocs = 0;
-    let allReceivedDocs = 0;
-    let allSentDocs = 0;
-    let transfersInProgress = 0;
-    try {
-      for (const share in newStatus) {
-        console.log('status update on share', share);
-        const shareStatus = newStatus[share];
-        allRequestedDocs += shareStatus.docs.requestedCount;
-        allReceivedDocs += shareStatus.docs.receivedCount;
-        allSentDocs += shareStatus.docs.sentCount;
-        const docsStatus = shareStatus.docs.status;
-        console.log('docsStatus', docsStatus);
-
-        const transfersWaiting = shareStatus.attachments.filter((transfer) => {
-          return transfer.status === "ready" || transfer.status === "in_progress";
-        });
-        transfersInProgress += transfersWaiting.length;
-
-        if (docsStatus === 'aborted' && transfersInProgress === 0) {
-          console.log('Websocket aborted?', 'transfersInProgress', transfersInProgress);
-          await replica.close(false);
-          console.log('closed replica?', replica.isClosed());
-          replica = initReplica();
+      try {
+        for (const share in newStatus) {
+          console.log('status update on share', share);
+          const shareStatus = newStatus[share];
+          allRequestedDocs += shareStatus.docs.requestedCount;
+          allReceivedDocs += shareStatus.docs.receivedCount;
+          allSentDocs += shareStatus.docs.sentCount;
+          const docsStatus = shareStatus.docs.status;
+          console.log('docsStatus', docsStatus);
+  
+          const transfersWaiting = shareStatus.attachments.filter((transfer) => {
+            return transfer.status === "ready" || transfer.status === "in_progress";
+          });
+          transfersInProgress += transfersWaiting.length;
+  
+          if (docsStatus === 'aborted' && transfersInProgress === 0) {
+            console.log('Websocket aborted?', 'transfersInProgress', transfersInProgress);
+            await replica.close(false);
+            console.log('closed replica?', replica.isClosed());
+            // @TODO simply call init() again?
+            replica = initReplica();
+            syncer = initPeerSyncer(replica);
+            syncerOnStatusChange(syncer);
+          }
         }
-      }
-      console.log(
-        `Syncing ${Object.keys(newStatus).length
-        } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
-      );
-      if (allReceivedDocs < allRequestedDocs) {
-        dataLoading();
-      } else {
+        console.log(
+          `Syncing ${Object.keys(newStatus).length
+          } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
+        );
+        if (allReceivedDocs < allRequestedDocs) {
+          dataLoading();
+        } else {
+          dataReady();
+        }
+        await getStatusDoc(replica);
+        await renderJournal(replica);
+      } catch (error) {
         dataReady();
+        // @TODO Try to reconnect?
+        if (error === "Websocket error") {
+          console.log('Websocket error', 'should try to reconnect...');
+        }
+        dataError(true);
+        console.error(error);
       }
-      await getStatusDoc(replica);
-      await renderJournal(replica);
-    } catch (error) {
-      dataReady();
-      // @TODO Try to reconnect?
-      if (error === "Websocket error") {
-        console.log('Websocket error', 'should try to reconnect...');
-      }
-      dataError(true);
-      console.error(error);
-    }
-  });
+    });
+  }
 
   /**
    * Initial sync
    */
   const init = async () => {
+    const syncer = initPeerSyncer(replica);
+
+    syncerOnStatusChange(syncer);
+
     await getStatusDoc(replica);
     await renderJournal(replica);
+    
     dataReady();
+    
     // this only works with appetite "once"
     await syncer.isDone();
     console.log("SYNCED!");
+
     await replica.close(false);
   };
 
