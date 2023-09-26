@@ -31,6 +31,72 @@ const dataError = (show) => {
 }
 
 /**
+   * Renders the journal to the HTML
+   */
+const renderJournal = async (replica) => {
+  const LIMIT = -1000;
+
+  const journalEl = document.getElementById("journal");
+  const journalEntriesLengthEl = document.getElementById(
+    "journalEntriesLength",
+  );
+  const journal = await replica.queryDocs({
+    historyMode: "latest",
+    filter: {
+      // Take only the files for each month, not the individual entries
+      // 202 ... 2023, 2024, ...
+      pathStartsWith: "/timekeeper/1.0/journal/202",
+    },
+  });
+  if (journalEl) {
+    journalEl.innerHTML = "";
+  }
+  if (!journal) {
+    return;
+  }
+  // Parse the text files
+  const theJournalData = [];
+  const fileEntries = [];
+  for (const file of journal) {
+    fileEntries.push(file.text.split(/\r?\n/).filter((element) => element));
+  }
+  fileEntries.forEach((entries) => {
+    entries.forEach((entry) => {
+      theJournalData.push(entry);
+    });
+  });
+  // Show last x entries
+  const _entries = theJournalData?.slice(LIMIT).reverse();
+  if (journalEntriesLengthEl) {
+    if (Math.abs(LIMIT) < theJournalData.length) {
+      journalEntriesLengthEl.innerText = `${Math.abs(LIMIT)
+        } of ${theJournalData.length} entries`;
+    } else {
+      journalEntriesLengthEl.innerText = `${theJournalData.length} entries`;
+    }
+  }
+  _entries.forEach((entry) => {
+    const _entry = entry.split(/\t/);
+    const _date = new Date(parseInt(_entry[0], 10));
+    const node = document.createElement("li");
+    const dateNode = document.createElement("div");
+    dateNode.classList.add("entry-date");
+    const textNode = document.createElement("div");
+    textNode.classList.add("entry-content");
+    dateNode.innerText = new Intl.DateTimeFormat("en-gb", {
+      dateStyle: "full",
+      timeStyle: "medium",
+    }).format(_date);
+    textNode.innerText = _entry[1];
+    node.appendChild(dateNode);
+    node.appendChild(textNode);
+    if (journalEl) {
+      journalEl.appendChild(node);
+    }
+  });
+};
+
+/**
  * Requests and stores the address of the share and server to sync with
  * @param {*} opts 
  * @returns 
@@ -79,15 +145,11 @@ const app = () => {
    */
   const AUTHOR = "@joe1.b3nemplqj3wowds7vqeu5nnrf6yv6co3bnncv64peywoyvv7lpw3a";
   const statusPath = `/about/1.0/~${AUTHOR}/status`;
-  const LIMIT = -1000;
 
   const { share, server } = getSettings({ author: AUTHOR });
 
   const THESHARE = share;
   const THESERVER = server;
-
-  // console.log('settings', settings);
-  // console.log('AUTHOR', AUTHOR);
 
   const initReplica = () => {
     console.log('init a replica', THESHARE)
@@ -107,7 +169,6 @@ const app = () => {
    */
   const getStatusDoc = async (replica) => {
     const replicaStatus = await replica.getLatestDocAtPath(statusPath);
-    // console.log('replicaStatus', replicaStatus);
     if (replicaStatus) {
       renderStatus(replicaStatus?.text);
     }
@@ -115,76 +176,9 @@ const app = () => {
 
   const rtStatus = async (cache) => {
     const cacheStatus = await cache.getLatestDocAtPath(statusPath);
-    // console.log('cacheStatus', cacheStatus);
     if (cacheStatus) {
       renderStatus(cacheStatus?.text);
     }
-  };
-
-  /**
-   * Renders the journal to the HTML
-   */
-  const renderJournal = async (replica) => {
-    const journalEl = document.getElementById("journal");
-    const journalEntriesLengthEl = document.getElementById(
-      "journalEntriesLength",
-    );
-    const journal = await replica.queryDocs({
-      historyMode: "latest",
-      filter: {
-        // Take only the files for each month, not the individual entries
-        // 202 ... 2023, 2024, ...
-        pathStartsWith: "/timekeeper/1.0/journal/202",
-      },
-    });
-    // console.log('renderJournal', journal);
-    if (journalEl) {
-      journalEl.innerHTML = "";
-    }
-    if (!journal) {
-      return;
-    }
-    // Parse the text files
-    const theJournalData = [];
-    const fileEntries = [];
-    for (const file of journal) {
-      fileEntries.push(file.text.split(/\r?\n/).filter((element) => element));
-    }
-    fileEntries.forEach((entries) => {
-      entries.forEach((entry) => {
-        theJournalData.push(entry);
-      });
-    });
-    // Show last x entries
-    const _entries = theJournalData?.slice(LIMIT).reverse();
-    if (journalEntriesLengthEl) {
-      if (Math.abs(LIMIT) < theJournalData.length) {
-        journalEntriesLengthEl.innerText = `${Math.abs(LIMIT)
-          } of ${theJournalData.length} entries`;
-      } else {
-        journalEntriesLengthEl.innerText = `${theJournalData.length} entries`;
-      }
-    }
-    _entries.forEach((entry) => {
-      const _entry = entry.split(/\t/);
-      const _date = new Date(parseInt(_entry[0], 10));
-      const node = document.createElement("li");
-      const dateNode = document.createElement("div");
-      dateNode.classList.add("entry-date");
-      const textNode = document.createElement("div");
-      textNode.classList.add("entry-content");
-      // textNode.classList.add('is-three-quarters');
-      dateNode.innerText = new Intl.DateTimeFormat("en-gb", {
-        dateStyle: "full",
-        timeStyle: "medium",
-      }).format(_date);
-      textNode.innerText = _entry[1];
-      node.appendChild(dateNode);
-      node.appendChild(textNode);
-      if (journalEl) {
-        journalEl.appendChild(node);
-      }
-    });
   };
 
   const initCache = (replica) => {
@@ -214,7 +208,7 @@ const app = () => {
     return peer.sync(THESERVER, LIVE);
   }
 
-  const syncer = initPeerSyncer(replica);
+  let syncer = initPeerSyncer(replica);
 
   console.log('syncer', syncer);
 
@@ -253,6 +247,7 @@ const app = () => {
           await replica.close(false);
           console.log('closed replica?', replica.isClosed());
           replica = initReplica();
+          syncer = initPeerSyncer(replica);
         }
       }
       console.log(
