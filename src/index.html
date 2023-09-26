@@ -10,6 +10,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <style>
+        .status-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
         #journal {
             display: grid;
             grid-gap: 1rem;
@@ -47,13 +52,10 @@
 
 <body class="has-background-dark has-text-light">
     <noscript>You will need JavaScript to see interesting things here. Sorry.</noscript>
-    <div class="container" id="data-loading">
-        <section class="section has-text-light">
-            <h1 class="title is-1 has-text-light">Earthstar TimeKeeper</h1>
-            <h2 id="loading-initial" class="subtitle is-2 m-4 has-text-light"><em>Loading data...</em></h2>
-        </section>
-    </div>
-    <div class="container is-hidden" id="data-ready">
+    <div class="container">
+        <div id="data-loading" class="status-indicator m-4 has-text-light"><em>Loading data...</em></div>
+        <div id="data-ready" class="status-indicator is-hidden m-4 has-text-light"><em>OK</em></div>
+        <div id="data-error" class="status-indicator is-hidden m-4 has-text-light"><em>ERRORED</em></div>
         <section class="section">
             <h1 class="title is-1 has-text-light">Earthstar TimeKeeper</h1>
             <h2 class="subtitle is-2 has-text-light"><em>Status:</em> <span id="status"></span></h2>

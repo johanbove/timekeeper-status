@@ -18,6 +18,13 @@ const dataReady = () => {
   document.getElementById("data-ready")?.classList.remove("is-hidden");
   document.getElementById("data-loading")?.classList.add("is-hidden");
 };
+const dataError = (show) => {
+  if (show) {
+    document.getElementById("data-error")?.classList.remove("is-hidden");
+  } else {
+    document.getElementById("data-error")?.classList.add("is-hidden");
+  }
+}
 /**
  * Allows for storing settings in browser
  */
@@ -163,6 +170,7 @@ peer.addReplica(replica);
 const syncer = peer.sync(THESERVER, true);
 // console.log('syncer', syncer);
 syncer.onStatusChange(async (newStatus) => {
+  dataError(false);
   console.log('syncer.onStatusChange', newStatus);
   let allRequestedDocs = 0;
   let allReceivedDocs = 0;
@@ -197,6 +205,7 @@ syncer.onStatusChange(async (newStatus) => {
       console.log('Websocket error', 'should try to reconnect...');
       // syncer = peer.sync(THESERVER, true);
     }
+    dataError(true);
     console.error(error);
   }
 });

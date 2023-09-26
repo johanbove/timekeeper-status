@@ -31,3 +31,12 @@ In no particular order.
 - [ ] Journal: Add pagination to the "Journal".
 - [ ] Journal: Allow for period filtering.
 - [ ] Status: show timestamp of last status update.
+
+## Build Command
+
+    cp src/* public/
+
+## Deploy
+
+    fly deploy --remote-only
+
