@@ -18,6 +18,9 @@
         #journal {
             display: grid;
             grid-gap: 1rem;
+            max-height: 30rem;
+            overflow-y: auto;
+            padding-right: 1rem;
         }
         @media screen and (min-width: 600px) {
             #journal {
@@ -35,7 +38,7 @@
             display: flex;
             flex-direction: column;
             padding: 1rem;
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: rgba(0, 0, 0, 0.05);
             align-items: start;
         }
         #journal .entry-date {
@@ -50,22 +53,29 @@
     </style>
 </head>
 
-<body class="has-background-dark has-text-light">
+<body class="has-background-light">
     <noscript>You will need JavaScript to see interesting things here. Sorry.</noscript>
-    <div class="container">
-        <div id="data-loading" class="status-indicator m-4 has-text-light"><em>Loading data...</em></div>
-        <div id="data-ready" class="status-indicator is-hidden m-4 has-text-light"><em>OK</em></div>
-        <div id="data-error" class="status-indicator is-hidden m-4 has-text-light"><em>ERRORED</em></div>
-        <section class="section">
-            <h1 class="title is-1 has-text-light">Earthstar TimeKeeper</h1>
-            <h2 class="subtitle is-2 has-text-light"><em>Status:</em> <span id="status"></span></h2>
-        </section>
-        <section class="section">
-            <h2 class="title is-2 has-text-light">Journal</h2>
-            <p class="subtitle is-5 has-text-light"><em id="journalEntriesLength"></em></p>
+    <div id="data-loading" class="status-indicator m-4"><em>Loading data...</em></div>
+    <div id="data-ready" class="status-indicator is-hidden m-4"><em>OK</em></div>
+    <div id="data-error" class="status-indicator is-hidden m-4"><em>ERRORED</em></div>
+    <section class="section">
+        <div class="container">
+            <h1 class="title is-1">Earthstar TimeKeeper</h1>
+            <h2 class="subtitle is-2"><em>Status:</em> <span id="status"></span></h2>
+        </div>
+    </section>
+    <section class="section">
+        <div class="container">
+            <h2 class="title is-2">Journal</h2>
+            <p class="subtitle is-5"><em id="journalEntriesLength"></em></p>
             <ul id="journal"></ul>
-        </section>
-    </div>
+        </div>
+    </section>
+    <footer class="footer">
+        <div class="content has-text-centered">
+            Powered by <a href="https://earthstar-project.org">EarthStar Project</a>.
+        </div>
+    </footer>
     <script src="./main.js" type="module" defer async></script>
 </body>
 
