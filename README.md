@@ -24,13 +24,14 @@ Code is formatted using "deno fmt".
 In no particular order.
 
 - [ ] Add `displayName` so it is clear who's data we're seeing.
-- [ ] Add nicer "loading" display for the initial data loading.
+- [x] Add nicer "loading" display for the initial data loading.
 - [ ] Add custom prompts for asking for server and share address.
 - [ ] Render Time Reports and Timesheet.
-- [ ] Clean up the source code with better structuring.
+- [x] Clean up the source code with better structuring.
 - [ ] Journal: Add pagination to the "Journal".
 - [ ] Journal: Allow for period filtering.
 - [ ] Status: show timestamp of last status update.
+- [x] Organise the journal entries by day.
 
 ## Build Command
 
