@@ -75,26 +75,100 @@ const renderJournal = async (replica) => {
       journalEntriesLengthEl.innerText = `${theJournalData.length} entries`;
     }
   }
-  _entries.forEach((entry) => {
-    const _entry = entry.split(/\t/);
-    const _date = new Date(parseInt(_entry[0], 10));
+  /**
+   * Creates the HTML elements and appends it to the journal
+   * @param {Date} theDate 
+   * @param {String} theContent 
+   */
+  const renderToHTML = (theDate, theContent) => {
     const node = document.createElement("li");
-    const dateNode = document.createElement("div");
+    const dateNode = document.createElement("time");
     dateNode.classList.add("entry-date");
     const textNode = document.createElement("div");
     textNode.classList.add("entry-content");
     dateNode.innerText = new Intl.DateTimeFormat("en-gb", {
-      dateStyle: "full",
-      timeStyle: "medium",
-    }).format(_date);
-    textNode.innerText = _entry[1];
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(theDate);
+    textNode.innerText = theContent;
     node.appendChild(dateNode);
     node.appendChild(textNode);
+    return node;
+  }
+
+  const entriesByDay = {};
+  const entriesByMonth = {};
+
+  let node;
+
+  _entries.forEach((entry) => {
+    const _entry = entry.split(/\t/);
+    if (!_entry.length) {
+      console.error('Unexpected invalid entry', entry);
+      return;
+    }
+    // First part is the data
+    const _date = new Date(parseInt(_entry[0], 10));
+    // Second entry part is the actual message
+    const _content = _entry[1] || '';
+
+    const _theDay = _date.toISOString().split('T');
+    const _theMonth = _date.getMonth() + 1;
+
+    if (entriesByDay[_theDay[0]]) {
+      entriesByDay[_theDay[0]].push({ date: _date, content: _content });
+    } else {
+      entriesByDay[_theDay[0]] = [{ date: _date, content: _content }];
+    }
+    
+    if (entriesByMonth[_theMonth]) {
+      entriesByMonth[_theMonth].push({ date: _date, content: _content });
+    } else {
+      entriesByMonth[_theMonth] = [{ date: _date, content: _content }];
+    }
+
+  });
+
+  let lastKey;
+    
+  
+  Object.keys(entriesByDay).forEach((key) => {
+    const entries = entriesByDay[key];
+    const count = entries.length;
+    let sublist, label;
+    if (key !== lastKey) {
+      node = document.createElement("li");
+      sublist = document.createElement("ul");
+      label = document.createElement("h4");
+      label.classList.add('subtitle','is-4','mt-2');
+      const labelDate = new Date(key);
+      const labelDateFormatOptions = {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      };
+      label.innerText = `${count} on ${new Intl.DateTimeFormat("en-gb", labelDateFormatOptions).format(labelDate)}`;
+      node.appendChild(label);
+      lastKey = key;
+    }
+    entries.forEach((entry, index) => {
+      const { date, content } = entry;
+      const el = renderToHTML(date, content);
+      sublist.appendChild(el);
+    });
+    node.appendChild(sublist);
     if (journalEl) {
       journalEl.appendChild(node);
     }
   });
+
+  // Debug
+  console.log('entriesByDay', entriesByDay);
+  console.log('entriesByMonth', entriesByMonth);
+
 };
+
 
 /**
  * Requests and stores the address of the share and server to sync with
@@ -137,7 +211,7 @@ const getSettings = (opts) => {
 /**
  * aka main
  */
-const app = () => {
+const main = () => {
 
   /**
    * The user to read the status from.
@@ -298,4 +372,4 @@ const app = () => {
 
 }
 
-app();
+main();
