@@ -1,6 +1,7 @@
 # Timekeeper Readonly
 
-Simple Web frontend using Earthstar showing the user status and some of the last journal entries.
+Simple Web frontend using Earthstar showing the user status and some of the last
+journal entries.
 
 <https://earthstar-project.org/docs/>
 
@@ -25,7 +26,7 @@ In no particular order.
 
 - [ ] Add `displayName` so it is clear who's data we're seeing.
 - [x] Add nicer "loading" display for the initial data loading.
-- [ ] Add custom prompts for asking for server and share address.
+- [x] Add custom prompts for asking for server and share address.
 - [ ] Render Time Reports and Timesheet.
 - [x] Clean up the source code with better structuring.
 - [ ] Journal: Add pagination to the "Journal".
@@ -40,4 +41,3 @@ In no particular order.
 ## Deploy
 
     fly deploy --remote-only
-

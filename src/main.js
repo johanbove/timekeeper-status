@@ -14,11 +14,11 @@ const dataReady = () => {
 const updateDataLoading = (current) => {
   const el = document.getElementById("data-loading");
   el.innerText = current;
-}
+};
 
 /**
  * Outputs the status
- **/
+ */
 const renderStatus = (status) => {
   const statusEl = document.getElementById("status");
   if (!statusEl) {
@@ -33,11 +33,11 @@ const dataError = (show) => {
   } else {
     document.getElementById("data-error")?.classList.add("is-hidden");
   }
-}
+};
 
 /**
-   * Renders the journal to the HTML
-   */
+ * Renders the journal to the HTML
+ */
 const renderJournal = async (replica) => {
   const LIMIT = -1000;
 
@@ -74,16 +74,17 @@ const renderJournal = async (replica) => {
   const _entries = theJournalData?.slice(LIMIT).reverse();
   if (journalEntriesLengthEl) {
     if (Math.abs(LIMIT) < theJournalData.length) {
-      journalEntriesLengthEl.innerText = `${Math.abs(LIMIT)
-        } of ${theJournalData.length} entries`;
+      journalEntriesLengthEl.innerText = `${
+        Math.abs(LIMIT)
+      } of ${theJournalData.length} entries`;
     } else {
       journalEntriesLengthEl.innerText = `${theJournalData.length} entries`;
     }
   }
   /**
    * Creates the HTML elements and appends it to the journal
-   * @param {Date} theDate 
-   * @param {String} theContent 
+   * @param {Date} theDate
+   * @param {String} theContent
    */
   const renderToHTML = (theDate, theContent) => {
     const node = document.createElement("li");
@@ -99,7 +100,7 @@ const renderJournal = async (replica) => {
     node.appendChild(dateNode);
     node.appendChild(textNode);
     return node;
-  }
+  };
 
   const entriesByDay = {};
   const entriesByMonth = {};
@@ -109,15 +110,15 @@ const renderJournal = async (replica) => {
   _entries.forEach((entry) => {
     const _entry = entry.split(/\t/);
     if (!_entry.length) {
-      console.error('Unexpected invalid entry', entry);
+      console.error("Unexpected invalid entry", entry);
       return;
     }
     // First part is the data
     const _date = new Date(parseInt(_entry[0], 10));
     // Second entry part is the actual message
-    const _content = _entry[1] || '';
+    const _content = _entry[1] || "";
 
-    const _theDay = _date.toISOString().split('T');
+    const _theDay = _date.toISOString().split("T");
     const _theMonth = _date.getMonth() + 1;
 
     if (entriesByDay[_theDay[0]]) {
@@ -131,7 +132,6 @@ const renderJournal = async (replica) => {
     } else {
       entriesByMonth[_theMonth] = [{ date: _date, content: _content }];
     }
-
   });
 
   let lastKey;
@@ -144,7 +144,7 @@ const renderJournal = async (replica) => {
       node = document.createElement("li");
       sublist = document.createElement("ul");
       label = document.createElement("h4");
-      label.classList.add('subtitle', 'is-4', 'mt-2');
+      label.classList.add("subtitle", "is-4", "mt-2");
       const labelDate = new Date(key);
       const labelDateFormatOptions = {
         weekday: "short",
@@ -152,8 +152,12 @@ const renderJournal = async (replica) => {
         month: "short",
         day: "numeric",
       };
-      node.classList.add(`month-${labelDate.getMonth() + 1}`)
-      label.innerText = `${count} on ${new Intl.DateTimeFormat("en-gb", labelDateFormatOptions).format(labelDate)}`;
+      node.classList.add(`month-${labelDate.getMonth() + 1}`);
+      label.innerText = `${count} on ${
+        new Intl.DateTimeFormat("en-gb", labelDateFormatOptions).format(
+          labelDate,
+        )
+      }`;
       node.appendChild(label);
       lastKey = key;
     }
@@ -171,27 +175,25 @@ const renderJournal = async (replica) => {
   // Debug
   // console.log('entriesByDay', entriesByDay);
   // console.log('entriesByMonth', entriesByMonth);
-
 };
-
 
 /**
  * Shows the settings form
- **/
+ */
 const setup = () => {
-  const formEl = document.getElementById('settings');
-  const setupEl = document.getElementById('setupSection');
-  const headerEl = document.getElementById('headerSection');
-  const journalEl = document.getElementById('journalSection');
-  const entriesEl = document.getElementById('entriesSection');
+  const formEl = document.getElementById("settings");
+  const setupEl = document.getElementById("setupSection");
+  const headerEl = document.getElementById("headerSection");
+  const journalEl = document.getElementById("journalSection");
+  const entriesEl = document.getElementById("entriesSection");
   const loadingEl = document.getElementById("data-loading");
 
-  setupEl.classList.remove('is-hidden');
-  loadingEl.classList.add('is-hidden');
-  formEl.classList.remove('is-hidden');
-  headerEl.classList.add('is-hidden');
-  journalEl.classList.add('is-hidden');
-  entriesEl.classList.add('is-hidden');
+  setupEl.classList.remove("is-hidden");
+  loadingEl.classList.add("is-hidden");
+  formEl.classList.remove("is-hidden");
+  headerEl.classList.add("is-hidden");
+  journalEl.classList.add("is-hidden");
+  entriesEl.classList.add("is-hidden");
 
   formEl.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -201,8 +203,8 @@ const setup = () => {
     if (result) {
       main();
     }
-  })
-}
+  });
+};
 
 const saveSettings = (form) => {
   let author;
@@ -210,18 +212,18 @@ const saveSettings = (form) => {
   let server;
 
   /**
-  * Allows for storing settings in browser
-  */
+   * Allows for storing settings in browser
+   */
   const settings = new Earthstar.SharedSettings();
 
   // Bind the FormData object and the form element
   const FD = new FormData(form);
 
-  console.log('FD', FD);
+  console.log("FD", FD);
 
-  author = FD.get('author_address');
-  share = FD.get('share_address');
-  server = FD.get('sync_url');
+  author = FD.get("author_address");
+  share = FD.get("share_address");
+  server = FD.get("sync_url");
 
   let error;
 
@@ -238,45 +240,46 @@ const saveSettings = (form) => {
   }
 
   if (!server || server.length < 5) {
-    error = 'Invalid server url';
+    error = "Invalid server url";
     window.alert(error);
     throw new Error(error);
   }
 
   settings.addShare(share);
   settings.addServer(server);
-  settings.author = { address: author, secret: '' };
+  settings.author = { address: author, secret: "" };
 
-  console.log('settings', settings);
+  console.log("settings", settings);
   return true;
-}
+};
 
 /**
  * aka main
  */
 const main = () => {
-  const formEl = document.getElementById('settings');
-  const setupEl = document.getElementById('setupSection');
-  const headerEl = document.getElementById('headerSection');
-  const journalEl = document.getElementById('journalSection');
-  const entriesEl = document.getElementById('entriesSection');
+  const formEl = document.getElementById("settings");
+  const setupEl = document.getElementById("setupSection");
+  const headerEl = document.getElementById("headerSection");
+  const journalEl = document.getElementById("journalSection");
+  const entriesEl = document.getElementById("entriesSection");
   const loadingEl = document.getElementById("data-loading");
 
   const settings = new Earthstar.SharedSettings();
 
-  let hasSettings = (settings.shares.length && settings.servers.length && settings.author);
+  let hasSettings = settings.shares.length && settings.servers.length &&
+    settings.author;
 
   if (!hasSettings) {
     return setup();
   } else {
-    setupEl.classList.add('is-hidden');
-    loadingEl.classList.remove('is-hidden');
-    formEl.classList.add('is-hidden');
-    headerEl.classList.remove('is-hidden');
-    journalEl.classList.remove('is-hidden');
-    entriesEl.classList.remove('is-hidden');
+    setupEl.classList.add("is-hidden");
+    loadingEl.classList.remove("is-hidden");
+    formEl.classList.add("is-hidden");
+    headerEl.classList.remove("is-hidden");
+    journalEl.classList.remove("is-hidden");
+    entriesEl.classList.remove("is-hidden");
   }
-  
+
   const AUTHOR = settings.author.address;
   const SHARE_INDEX = 0;
   const SERVER_INDEX = 0;
@@ -286,15 +289,15 @@ const main = () => {
   const THESERVER = settings.servers[SERVER_INDEX];
 
   const initReplica = () => {
-    console.log('init a replica', THESHARE)
+    console.log("init a replica", THESHARE);
     /**
      * Creates the replica, which stores the documents and allows us to query them
-     **/
+     */
     return new Earthstar.Replica({
       driver: new Earthstar.ReplicaDriverWeb(THESHARE),
       // shareSecret, // Not given as this is READONLY!
     });
-  }
+  };
 
   let replica = initReplica();
 
@@ -317,20 +320,22 @@ const main = () => {
 
   /**
    * Fetches the report as an attachment from the Earthstar DB
-   * @param {*} replica 
-   * @param {*} year 
-   * @param {*} week 
-   * @returns 
+   * @param {*} replica
+   * @param {*} year
+   * @param {*} week
+   * @returns
    */
   const getReport = async (replica, year, week) => {
-    const doc = await replica.getLatestDocAtPath(`/timekeeper/1.0/entries/reports/${year}/${week}/report.json`);
+    const doc = await replica.getLatestDocAtPath(
+      `/timekeeper/1.0/entries/reports/${year}/${week}/report.json`,
+    );
     if (!doc || Earthstar.isErr(doc)) {
       //throw new Error('No report available!');
-      console.error('No report available');
+      console.error("No report available");
       return;
     }
-    console.log('doc', doc);
-    console.log('attachmentSize', doc.attachmentSize);
+    console.log("doc", doc);
+    console.log("attachmentSize", doc.attachmentSize);
     const attachment = await replica.getAttachment(doc);
     const report = new TextDecoder().decode(await attachment.bytes());
     return JSON.parse(report);
@@ -338,18 +343,18 @@ const main = () => {
 
   /**
    * Basis for being able to display my timekeeper entries
-   * @param {*} year 
-   * @param {*} week 
+   * @param {*} year
+   * @param {*} week
    */
   const renderReport = async (year, week) => {
     const theReport = await getReport(replica, year, week);
     if (!theReport) {
       return;
     }
-    console.log('theReport', theReport);
-    const entriesyearweekEl = document.getElementById('entriesyearweek');
+    console.log("theReport", theReport);
+    const entriesyearweekEl = document.getElementById("entriesyearweek");
     entriesyearweekEl.innerText = `For week ${theReport.currentWeekId}`;
-  }
+  };
 
   const initCache = (replica) => {
     // Load the data from the replica and write to the doc
@@ -357,10 +362,10 @@ const main = () => {
     const cache = new Earthstar.ReplicaCache(replica);
     // Whenever the replica is updated, this gets called and we update the log
     cache.onCacheUpdated(async () => {
-      console.log('cache.onCacheUpdated');
+      console.log("cache.onCacheUpdated");
       await rtStatus();
     });
-  }
+  };
 
   initCache(replica);
 
@@ -368,7 +373,7 @@ const main = () => {
     const LIVE = true;
     /**
      * Syncs with a remote replica so that we can get updates from other internet-enabled replicas
-      **/
+     */
     const peer = new Earthstar.Peer();
     peer.addReplica(replica);
 
@@ -376,20 +381,20 @@ const main = () => {
     // The 'live' argument keeps a persistent connection that will update the replica
     //  whenever changes are detected from the remote replica
     return peer.sync(THESERVER, LIVE);
-  }
+  };
 
   const checkSyncerPartner = async (syncer) => {
     const partner = syncer.partner;
-    console.log('partner.isSecure', partner.isSecure);
-  }
+    console.log("partner.isSecure", partner.isSecure);
+  };
 
   const syncerOnStatusChange = (syncer) => {
-    console.log('syncerOnStatusChange', syncer);
+    console.log("syncerOnStatusChange", syncer);
     checkSyncerPartner(syncer);
 
     syncer.onStatusChange(async (newStatus) => {
       dataError(false);
-      console.log('syncer.onStatusChange', newStatus);
+      console.log("syncer.onStatusChange", newStatus);
 
       let allRequestedDocs = 0;
       let allReceivedDocs = 0;
@@ -399,23 +404,30 @@ const main = () => {
 
       try {
         for (const share in newStatus) {
-          console.log('status update on share', share);
+          console.log("status update on share", share);
           const shareStatus = newStatus[share];
           allRequestedDocs += shareStatus.docs.requestedCount;
           allReceivedDocs += shareStatus.docs.receivedCount;
           allSentDocs += shareStatus.docs.sentCount;
           docsStatus = shareStatus.docs.status;
-          console.log('docsStatus', docsStatus);
+          console.log("docsStatus", docsStatus);
 
-          const transfersWaiting = shareStatus.attachments.filter((transfer) => {
-            return transfer.status === "ready" || transfer.status === "in_progress";
-          });
+          const transfersWaiting = shareStatus.attachments.filter(
+            (transfer) => {
+              return transfer.status === "ready" ||
+                transfer.status === "in_progress";
+            },
+          );
           transfersInProgress += transfersWaiting.length;
 
-          if (docsStatus === 'aborted' && transfersInProgress === 0) {
-            console.log('Websocket aborted?', 'transfersInProgress', transfersInProgress);
+          if (docsStatus === "aborted" && transfersInProgress === 0) {
+            console.log(
+              "Websocket aborted?",
+              "transfersInProgress",
+              transfersInProgress,
+            );
             await replica.close(false);
-            console.log('closed replica?', replica.isClosed());
+            console.log("closed replica?", replica.isClosed());
             // @TODO simply call init() again?
             replica = initReplica();
             syncer = initPeerSyncer(replica);
@@ -423,13 +435,14 @@ const main = () => {
           }
         }
         console.log(
-          `Syncing ${Object.keys(newStatus).length
+          `Syncing ${
+            Object.keys(newStatus).length
           } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
         );
 
         if (allReceivedDocs < allRequestedDocs) {
           let text = `Status: ${docsStatus} ${allRequestedDocs} docs...`;
-          if (allReceivedDocs > 0 && docsStatus === 'gossiping') {
+          if (allReceivedDocs > 0 && docsStatus === "gossiping") {
             const percent = allReceivedDocs / allRequestedDocs * 100;
             text = `Syncing: ${percent.toFixed(1)}%...`;
           }
@@ -445,13 +458,13 @@ const main = () => {
         dataReady();
         // @TODO Try to reconnect?
         if (error === "Websocket error") {
-          console.log('Websocket error', 'should try to reconnect...');
+          console.log("Websocket error", "should try to reconnect...");
         }
         dataError(true);
         console.error(error);
       }
     });
-  }
+  };
 
   /**
    * Initial sync
@@ -476,7 +489,6 @@ const main = () => {
   };
 
   init();
-
-}
+};
 
 main();
