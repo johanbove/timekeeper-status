@@ -180,10 +180,10 @@ const renderJournal = async (replica) => {
  **/
 const setup = () => {
   const formEl = document.getElementById('settings');
-  const setupEl = document.getElementById('setup');
-  const headerEl = document.getElementById('header');
-  const journalEl = document.getElementById('journal');
-  const entriesEl = document.getElementById('entries');
+  const setupEl = document.getElementById('setupSection');
+  const headerEl = document.getElementById('headerSection');
+  const journalEl = document.getElementById('journalSection');
+  const entriesEl = document.getElementById('entriesSection');
   const loadingEl = document.getElementById("data-loading");
 
   setupEl.classList.remove('is-hidden');
@@ -256,10 +256,10 @@ const saveSettings = (form) => {
  */
 const main = () => {
   const formEl = document.getElementById('settings');
-  const setupEl = document.getElementById('setup');
-  const headerEl = document.getElementById('header');
-  const journalEl = document.getElementById('journal');
-  const entriesEl = document.getElementById('entries');
+  const setupEl = document.getElementById('setupSection');
+  const headerEl = document.getElementById('headerSection');
+  const journalEl = document.getElementById('journalSection');
+  const entriesEl = document.getElementById('entriesSection');
   const loadingEl = document.getElementById("data-loading");
 
   const settings = new Earthstar.SharedSettings();
