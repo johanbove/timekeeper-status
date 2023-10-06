@@ -11,6 +11,11 @@ const dataReady = () => {
   document.getElementById("data-loading")?.classList.add("is-hidden");
 };
 
+const updateDataLoading = (current) => {
+  const el = document.getElementById("data-loading");
+  el.innerText = current;
+}
+
 /**
  * Outputs the status
  **/
@@ -120,7 +125,7 @@ const renderJournal = async (replica) => {
     } else {
       entriesByDay[_theDay[0]] = [{ date: _date, content: _content }];
     }
-    
+
     if (entriesByMonth[_theMonth]) {
       entriesByMonth[_theMonth].push({ date: _date, content: _content });
     } else {
@@ -130,8 +135,7 @@ const renderJournal = async (replica) => {
   });
 
   let lastKey;
-    
-  
+
   Object.keys(entriesByDay).forEach((key) => {
     const entries = entriesByDay[key];
     const count = entries.length;
@@ -140,7 +144,7 @@ const renderJournal = async (replica) => {
       node = document.createElement("li");
       sublist = document.createElement("ul");
       label = document.createElement("h4");
-      label.classList.add('subtitle','is-4','mt-2');
+      label.classList.add('subtitle', 'is-4', 'mt-2');
       const labelDate = new Date(key);
       const labelDateFormatOptions = {
         weekday: "short",
@@ -148,6 +152,7 @@ const renderJournal = async (replica) => {
         month: "short",
         day: "numeric",
       };
+      node.classList.add(`month-${labelDate.getMonth() + 1}`)
       label.innerText = `${count} on ${new Intl.DateTimeFormat("en-gb", labelDateFormatOptions).format(labelDate)}`;
       node.appendChild(label);
       lastKey = key;
@@ -164,11 +169,10 @@ const renderJournal = async (replica) => {
   });
 
   // Debug
-  console.log('entriesByDay', entriesByDay);
-  console.log('entriesByMonth', entriesByMonth);
+  // console.log('entriesByDay', entriesByDay);
+  // console.log('entriesByMonth', entriesByMonth);
 
 };
-
 
 /**
  * Requests and stores the address of the share and server to sync with
@@ -255,6 +259,37 @@ const main = () => {
     }
   };
 
+  /**
+   * Fetches the report as an attachment from the Earthstar DB
+   * @param {*} replica 
+   * @param {*} year 
+   * @param {*} week 
+   * @returns 
+   */
+  const getReport = async (replica, year, week) => {
+    const doc = await replica.getLatestDocAtPath(`/timekeeper/1.0/entries/reports/${year}/${week}/report.json`);
+    if (!doc || Earthstar.isErr(doc)) {
+      throw new Error('No report available!');
+    }
+    console.log('doc', doc);
+    console.log('attachmentSize', doc.attachmentSize);
+    const attachment = await replica.getAttachment(doc);
+    const report = new TextDecoder().decode(await attachment.bytes());
+    return JSON.parse(report);
+  };
+
+  /**
+   * Basis for being able to display my timekeeper entries
+   * @param {*} year 
+   * @param {*} week 
+   */
+  const renderReport = async (year, week) => {
+    const theReport = await getReport(replica, year, week);
+    console.log('theReport', theReport);
+    const entriesyearweekEl = document.getElementById('entriesyearweek');
+    entriesyearweekEl.innerText = `For week ${theReport.currentWeekId}`;
+  }
+
   const initCache = (replica) => {
     // Load the data from the replica and write to the doc
     // The cache allows us to listen to updates to the replica, adding the reactivity aspects we need
@@ -294,11 +329,12 @@ const main = () => {
     syncer.onStatusChange(async (newStatus) => {
       dataError(false);
       console.log('syncer.onStatusChange', newStatus);
-  
+
       let allRequestedDocs = 0;
       let allReceivedDocs = 0;
       let allSentDocs = 0;
       let transfersInProgress = 0;
+      let docsStatus;
 
       try {
         for (const share in newStatus) {
@@ -307,14 +343,14 @@ const main = () => {
           allRequestedDocs += shareStatus.docs.requestedCount;
           allReceivedDocs += shareStatus.docs.receivedCount;
           allSentDocs += shareStatus.docs.sentCount;
-          const docsStatus = shareStatus.docs.status;
+          docsStatus = shareStatus.docs.status;
           console.log('docsStatus', docsStatus);
-  
+
           const transfersWaiting = shareStatus.attachments.filter((transfer) => {
             return transfer.status === "ready" || transfer.status === "in_progress";
           });
           transfersInProgress += transfersWaiting.length;
-  
+
           if (docsStatus === 'aborted' && transfersInProgress === 0) {
             console.log('Websocket aborted?', 'transfersInProgress', transfersInProgress);
             await replica.close(false);
@@ -329,7 +365,14 @@ const main = () => {
           `Syncing ${Object.keys(newStatus).length
           } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
         );
+
         if (allReceivedDocs < allRequestedDocs) {
+          let text = `Status: ${docsStatus} ${allRequestedDocs} docs...`;
+          if (allReceivedDocs > 0 && docsStatus === 'gossiping') {
+            const percent = allReceivedDocs / allRequestedDocs * 100;
+            text = `Syncing: ${percent.toFixed(1)}%...`;
+          }
+          updateDataLoading(text);
           dataLoading();
         } else {
           dataReady();
@@ -358,9 +401,11 @@ const main = () => {
 
     await getStatusDoc(replica);
     await renderJournal(replica);
-    
+
+    renderReport(2023, 40);
+
     dataReady();
-    
+
     // this only works with appetite "once"
     await syncer.isDone();
     console.log("SYNCED!");

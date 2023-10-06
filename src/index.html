@@ -18,10 +18,11 @@
         #journal {
             display: grid;
             grid-gap: 1rem;
-            max-height: 30rem;
+            max-height: 35rem;
             overflow-y: auto;
             padding-right: 1rem;
         }
+
         @media screen and (min-width: 600px) {
             #journal {
                 grid-template-columns: repeat(2, minmax(10rem, 1fr));
@@ -34,12 +35,67 @@
                 grid-template-rows: auto;
             }
         }
+
+        .month-1 {
+            background-color: #8298b380;
+        }
+        .month-2 {
+            background-color: #67809f80;
+        }
+        .month-3 {
+            background-color: #C2FFB880;
+        }
+        .month-4 {
+            background-color: #9DFFA580;
+        }
+        .month-5 {
+            background-color: #7AFF9380;
+        }
+        .month-6 {
+            background-color: #FF8A7D80;
+        }
+        .month-7 {
+            background-color: #FF715780;
+        }
+        .month-8 {
+            background-color: #FF510080;
+        }
+        .month-9 {
+            background-color: #FF7C0080;
+        }
+        .month-10 {
+            background-color: #FF963280;
+        }
+        .month-11 {
+            background-color: #FFAF6F80;
+        }
+        .month-12 {
+            background-color: #9db0c680;
+        }
+
         #journal li {
             display: flex;
             flex-direction: column;
             padding: 1rem;
-            background-color: rgba(0, 0, 0, 0.05);
             align-items: start;
+            border-radius: 0.5rem;
+        }
+        #journal li li {
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        #journal li li:before {
+            border-radius: 0.5rem;
+            content: "";
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            opacity: .4;
+            background-color: #ffffff;
         }
         #journal .entry-date {
             flex: 0 1 1rem;
@@ -50,6 +106,8 @@
         #journal .entry-content {
             flex: 2;
         }
+        
+
     </style>
 </head>
 
@@ -69,6 +127,12 @@
             <h2 class="title is-2">Journal</h2>
             <p class="subtitle is-5"><em id="journalEntriesLength"></em></p>
             <ul id="journal"></ul>
+        </div>
+    </section>
+    <section class="section">
+        <div class="container">
+            <h2 class="title is-2">Entries</h2>
+            <p class="subtitle is-5"><em id="entriesyearweek"></em></p>
         </div>
     </section>
     <footer class="footer">
