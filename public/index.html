@@ -116,20 +116,54 @@
     <div id="data-loading" class="status-indicator m-4"><em>Loading data...</em></div>
     <div id="data-ready" class="status-indicator is-hidden m-4"><em>OK</em></div>
     <div id="data-error" class="status-indicator is-hidden m-4"><em>ERRORED</em></div>
-    <section class="section">
+    <section class="section" id="setup">
+        <div class="container">
+            <h1 class="title is-1">Earthstar TimeKeeper</h1>
+            <h2 class="subtitle is-2">Setup</h2>
+            <form id="settings">
+                <div class="field">
+                    <label class="label" for="author_address">Author</label>
+                    <div class="control">
+                        <input class="input" name="author_address" id="author_address" type="text" placeholder="The address of the author" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="share_address">Share Address</label>
+                    <div class="control">
+                        <input class="input" name="share_address" id="share_address" type="text" placeholder="The address of the share to sync" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="sync_url">Sync URL</label>
+                    <div class="control">
+                        <input class="input" name="sync_url" id="sync_url" type="text" placeholder="The URL of the server to sync with" re>
+                    </div>
+                </div>
+                <div class="field is-grouped">
+                  <div class="control">
+                    <button type="submit" class="button is-link">Submit</button>
+                  </div>
+                  <div class="control">
+                    <button type="reset" class="button is-link is-light">Cancel</button>
+                  </div>
+                </div>
+            </form>
+        </div>
+    </section>
+    <section class="section is-hidden" id="header">
         <div class="container">
             <h1 class="title is-1">Earthstar TimeKeeper</h1>
             <h2 class="subtitle is-2"><em>Status:</em> <span id="status"></span></h2>
         </div>
     </section>
-    <section class="section">
+    <section class="section is-hidden" id="journal">
         <div class="container">
             <h2 class="title is-2">Journal</h2>
             <p class="subtitle is-5"><em id="journalEntriesLength"></em></p>
             <ul id="journal"></ul>
         </div>
     </section>
-    <section class="section">
+    <section class="section is-hidden" id="entries">
         <div class="container">
             <h2 class="title is-2">Entries</h2>
             <p class="subtitle is-5"><em id="entriesyearweek"></em></p>

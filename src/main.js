@@ -174,60 +174,116 @@ const renderJournal = async (replica) => {
 
 };
 
-/**
- * Requests and stores the address of the share and server to sync with
- * @param {*} opts 
- * @returns 
- */
-const getSettings = (opts) => {
-  const { author } = opts;
 
-  let shareAddress;
+/**
+ * Shows the settings form
+ **/
+const setup = () => {
+  const formEl = document.getElementById('settings');
+  const setupEl = document.getElementById('setup');
+  const headerEl = document.getElementById('header');
+  const journalEl = document.getElementById('journal');
+  const entriesEl = document.getElementById('entries');
+  const loadingEl = document.getElementById("data-loading");
+
+  setupEl.classList.remove('is-hidden');
+  loadingEl.classList.add('is-hidden');
+  formEl.classList.remove('is-hidden');
+  headerEl.classList.add('is-hidden');
+  journalEl.classList.add('is-hidden');
+  entriesEl.classList.add('is-hidden');
+
+  formEl.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const result = saveSettings(formEl);
+
+    if (result) {
+      main();
+    }
+  })
+}
+
+const saveSettings = (form) => {
+  let author;
+  let share;
   let server;
+
   /**
   * Allows for storing settings in browser
   */
   const settings = new Earthstar.SharedSettings();
 
-  // Not really used right now as we don't allow edits
-  settings.author = { address: author, secret: "" };
+  // Bind the FormData object and the form element
+  const FD = new FormData(form);
 
-  if (!settings.shares.length || !settings.servers.length) {
-    if (!settings.shares.length) {
-      shareAddress = window.prompt("Welcome!\nWhat is the share address?");
-      if (shareAddress?.length) {
-        settings.addShare(shareAddress);
-      }
-      location.reload();
-    }
-    if (!settings.servers.length) {
-      server = window.prompt("What is the server to sync with?");
-      if (server?.length) {
-        settings.addServer(server);
-      }
-      location.reload();
-    }
+  console.log('FD', FD);
+
+  author = FD.get('author_address');
+  share = FD.get('share_address');
+  server = FD.get('sync_url');
+
+  let error;
+
+  if (Earthstar.isErr(Earthstar.checkAuthorIsValid(author))) {
+    error = Earthstar.checkAuthorIsValid(author);
+    window.alert(error);
+    throw new Error(error);
   }
 
-  return { share: settings.shares[0], server: settings.servers[0] }
+  if (Earthstar.isErr(Earthstar.checkShareIsValid(share))) {
+    error = Earthstar.checkShareIsValid(share);
+    window.alert(error);
+    throw new Error(error);
+  }
+
+  if (!server || server.length < 5) {
+    error = 'Invalid server url';
+    window.alert(error);
+    throw new Error(error);
+  }
+
+  settings.addShare(share);
+  settings.addServer(server);
+  settings.author = { address: author, secret: '' };
+
+  console.log('settings', settings);
+  return true;
 }
 
 /**
  * aka main
  */
 const main = () => {
+  const formEl = document.getElementById('settings');
+  const setupEl = document.getElementById('setup');
+  const headerEl = document.getElementById('header');
+  const journalEl = document.getElementById('journal');
+  const entriesEl = document.getElementById('entries');
+  const loadingEl = document.getElementById("data-loading");
 
-  /**
-   * The user to read the status from.
-   * Not a secret!
-   */
-  const AUTHOR = "@joe1.b3nemplqj3wowds7vqeu5nnrf6yv6co3bnncv64peywoyvv7lpw3a";
+  const settings = new Earthstar.SharedSettings();
+
+  let hasSettings = (settings.shares.length && settings.servers.length && settings.author);
+
+  if (!hasSettings) {
+    return setup();
+  } else {
+    setupEl.classList.add('is-hidden');
+    loadingEl.classList.remove('is-hidden');
+    formEl.classList.add('is-hidden');
+    headerEl.classList.remove('is-hidden');
+    journalEl.classList.remove('is-hidden');
+    entriesEl.classList.remove('is-hidden');
+  }
+  
+  const AUTHOR = settings.author.address;
+  const SHARE_INDEX = 0;
+  const SERVER_INDEX = 0;
   const statusPath = `/about/1.0/~${AUTHOR}/status`;
 
-  const { share, server } = getSettings({ author: AUTHOR });
-
-  const THESHARE = share;
-  const THESERVER = server;
+  const THESHARE = settings.shares[SHARE_INDEX];
+  const THESERVER = settings.servers[SERVER_INDEX];
 
   const initReplica = () => {
     console.log('init a replica', THESHARE)
@@ -269,7 +325,9 @@ const main = () => {
   const getReport = async (replica, year, week) => {
     const doc = await replica.getLatestDocAtPath(`/timekeeper/1.0/entries/reports/${year}/${week}/report.json`);
     if (!doc || Earthstar.isErr(doc)) {
-      throw new Error('No report available!');
+      //throw new Error('No report available!');
+      console.error('No report available');
+      return;
     }
     console.log('doc', doc);
     console.log('attachmentSize', doc.attachmentSize);
@@ -285,6 +343,9 @@ const main = () => {
    */
   const renderReport = async (year, week) => {
     const theReport = await getReport(replica, year, week);
+    if (!theReport) {
+      return;
+    }
     console.log('theReport', theReport);
     const entriesyearweekEl = document.getElementById('entriesyearweek');
     entriesyearweekEl.innerText = `For week ${theReport.currentWeekId}`;
@@ -379,6 +440,7 @@ const main = () => {
         }
         await getStatusDoc(replica);
         await renderJournal(replica);
+        renderReport(2023, 40);
       } catch (error) {
         dataReady();
         // @TODO Try to reconnect?
