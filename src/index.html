@@ -107,7 +107,15 @@
             flex: 2;
         }
         
+        .comment-timestamp,
+        .entry-key {
+            font-family: monospace;
+        }
 
+        .entry-duration,
+        .comment-duration {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+        }
     </style>
 </head>
 
@@ -167,6 +175,33 @@
         <div class="container">
             <h2 class="title is-2">Entries</h2>
             <p class="subtitle is-5"><em id="entriesyearweek"></em></p>
+            <table id="entries" class="table">
+                <caption><em>TimeKeeper Entries are generated manually!</em></caption>
+                <thead>
+                    <tr>
+                        <th>Year/Week/Day/Tag</th>
+                        <th>Duration</th>
+                        <th>Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- replaced by JS -->
+                </tbody>
+            </table>
+            <template id="timekeeperentry">
+                <tr>
+                    <td class="entry-key"></td>
+                    <td class="entry-duration"></td>
+                    <td class="entry-comments"></td>
+                </tr>
+            </template>
+            <template id="timeentrycomment">
+                <div class="entry-comment">
+                    <time class="comment-timestamp"></time>
+                    <div class="comment-label"></div>
+                    <div class="comment-duration"></div>
+                </div>
+            </template>
         </div>
     </section>
     <footer class="footer">

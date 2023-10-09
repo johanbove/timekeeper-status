@@ -36,6 +36,55 @@ const dataError = (show) => {
 };
 
 /**
+ * 
+ * @param {*} entries 
+ */
+const renderEntriesTable = (entries) => {
+  if ("content" in document.createElement("template")) {
+
+    // Instantiate the table with the existing HTML tbody
+    // and the row with the template
+    const tbody = document.querySelector("#entries tbody");
+    const commentTemplate = document.querySelector("#timeentrycomment");
+    const template = document.querySelector("#timekeeperentry");
+
+    // reset 
+    tbody.innerHTML = null;
+
+    Object.keys(entries).forEach((key) => {
+      const entry = entries[key];
+      // Clone the new row and insert it into the table
+      const clone = template.content.cloneNode(true);
+      const td = clone.querySelectorAll("td");
+      td[0].textContent = key;
+      td[1].textContent = entry.duration.toFixed(2) + "h";
+
+      const comments = entry.comments;
+
+      td[2].innerHTML = null;
+
+      comments.forEach((comment) => {
+        const commentClone = commentTemplate.content.cloneNode(true);
+
+        const timestampEl = commentClone.querySelector(".comment-timestamp");
+        timestampEl.textContent = new Date(comment.timestamp).toLocaleString();
+        timestampEl.setAttribute('datetime', comment.timestamp);
+        commentClone.querySelector(".comment-label").textContent = comment.label;
+        commentClone.querySelector(".comment-duration").textContent = comment.duration.toFixed(2) + 'h';
+
+        td[2].appendChild(commentClone);
+      });
+
+      tbody.appendChild(clone);
+    });
+
+  } else {
+    throw new Error('Template tag not supported in this browser');
+  }
+
+};
+
+/**
  * Renders the journal to the HTML
  */
 const renderJournal = async (replica) => {
@@ -74,9 +123,8 @@ const renderJournal = async (replica) => {
   const _entries = theJournalData?.slice(LIMIT).reverse();
   if (journalEntriesLengthEl) {
     if (Math.abs(LIMIT) < theJournalData.length) {
-      journalEntriesLengthEl.innerText = `${
-        Math.abs(LIMIT)
-      } of ${theJournalData.length} entries`;
+      journalEntriesLengthEl.innerText = `${Math.abs(LIMIT)
+        } of ${theJournalData.length} entries`;
     } else {
       journalEntriesLengthEl.innerText = `${theJournalData.length} entries`;
     }
@@ -153,11 +201,10 @@ const renderJournal = async (replica) => {
         day: "numeric",
       };
       node.classList.add(`month-${labelDate.getMonth() + 1}`);
-      label.innerText = `${count} on ${
-        new Intl.DateTimeFormat("en-gb", labelDateFormatOptions).format(
-          labelDate,
-        )
-      }`;
+      label.innerText = `${count} on ${new Intl.DateTimeFormat("en-gb", labelDateFormatOptions).format(
+        labelDate,
+      )
+        }`;
       node.appendChild(label);
       lastKey = key;
     }
@@ -257,7 +304,182 @@ const saveSettings = (form) => {
 };
 
 /**
- * aka main
+   * Gets the "status" doc from the replica
+   */
+const getStatusDoc = async (replica, statusPath) => {
+  const replicaStatus = await replica.getLatestDocAtPath(statusPath);
+  if (replicaStatus) {
+    renderStatus(replicaStatus?.text);
+  }
+};
+
+const rtStatus = async (cache, statusPath) => {
+  const cacheStatus = await cache.getLatestDocAtPath(statusPath);
+  if (cacheStatus) {
+    renderStatus(cacheStatus?.text);
+  }
+};
+
+/**
+ * Fetches the report as an attachment from the Earthstar DB
+ * @param {*} replica
+ * @param {*} year
+ * @param {*} week
+ * @returns
+ */
+const getReport = async (replica, year, week) => {
+  const doc = await replica.getLatestDocAtPath(
+    `/timekeeper/1.0/entries/reports/${year}/${week}/report.json`,
+  );
+  if (!doc || Earthstar.isErr(doc)) {
+    //throw new Error('No report available!');
+    console.error("No report available");
+    return;
+  }
+  console.log("doc", doc);
+  console.log("attachmentSize", doc.attachmentSize);
+  const attachment = await replica.getAttachment(doc);
+  const report = new TextDecoder().decode(await attachment.bytes());
+  return JSON.parse(report);
+};
+
+/**
+ * Basis for being able to display my timekeeper entries
+ * @param {*} year
+ * @param {*} week
+ */
+const renderReport = async (replica, year, week) => {
+  const theReport = await getReport(replica, year, week);
+  if (!theReport) {
+    return;
+  }
+  console.log("theReport", theReport);
+  const entriesyearweekEl = document.getElementById("entriesyearweek");
+  entriesyearweekEl.innerText = `For week ${theReport.currentWeekId}`;
+
+  renderEntriesTable(theReport.tagsPerDay);
+};
+
+/**
+ * 
+ * @param {*} replica 
+ */
+const initCache = (replica) => {
+  // Load the data from the replica and write to the doc
+  // The cache allows us to listen to updates to the replica, adding the reactivity aspects we need
+  const cache = new Earthstar.ReplicaCache(replica);
+  // Whenever the replica is updated, this gets called and we update the log
+  cache.onCacheUpdated(async () => {
+    console.log("cache.onCacheUpdated");
+    await rtStatus(cache, statusPath);
+  });
+};
+
+const initPeerSyncer = (replica, theserver) => {
+  const LIVE = true;
+  /**
+   * Syncs with a remote replica so that we can get updates from other internet-enabled replicas
+   */
+  const peer = new Earthstar.Peer();
+  peer.addReplica(replica);
+
+  // console.log('peer', peer);
+  // The 'live' argument keeps a persistent connection that will update the replica
+  //  whenever changes are detected from the remote replica
+  return peer.sync(theserver, LIVE);
+};
+
+const checkSyncerPartner = async (syncer) => {
+  const partner = syncer.partner;
+  console.log("partner.isSecure", partner.isSecure);
+};
+
+/**
+ * 
+ * @param {*} syncer 
+ * @param {*} replica 
+ */
+const syncerOnStatusChange = (syncer, replica, params) => {
+  const { weekNumber, year, statusPath } = params;
+  console.log("syncerOnStatusChange", syncer);
+  checkSyncerPartner(syncer);
+
+  syncer.onStatusChange(async (newStatus) => {
+    dataError(false);
+    console.log("syncer.onStatusChange", newStatus);
+
+    let allRequestedDocs = 0;
+    let allReceivedDocs = 0;
+    let allSentDocs = 0;
+    let transfersInProgress = 0;
+    let docsStatus;
+
+    try {
+      for (const share in newStatus) {
+        console.log("status update on share", share);
+        const shareStatus = newStatus[share];
+        allRequestedDocs += shareStatus.docs.requestedCount;
+        allReceivedDocs += shareStatus.docs.receivedCount;
+        allSentDocs += shareStatus.docs.sentCount;
+        docsStatus = shareStatus.docs.status;
+        console.log("docsStatus", docsStatus);
+
+        const transfersWaiting = shareStatus.attachments.filter(
+          (transfer) => {
+            return transfer.status === "ready" ||
+              transfer.status === "in_progress";
+          },
+        );
+        transfersInProgress += transfersWaiting.length;
+
+        if (docsStatus === "aborted" && transfersInProgress === 0) {
+          console.log(
+            "Websocket aborted?",
+            "transfersInProgress",
+            transfersInProgress,
+          );
+          await replica.close(false);
+          console.log("closed replica?", replica.isClosed());
+          // @TODO simply call init() again?
+          replica = initReplica();
+          syncer = initPeerSyncer(replica, THESERVER);
+          syncerOnStatusChange(syncer, replica, params);
+        }
+      }
+      console.log(
+        `Syncing ${Object.keys(newStatus).length
+        } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
+      );
+
+      if (allReceivedDocs < allRequestedDocs) {
+        let text = `Status: ${docsStatus} ${allRequestedDocs} docs...`;
+        if (allReceivedDocs > 0 && docsStatus === "gossiping") {
+          const percent = allReceivedDocs / allRequestedDocs * 100;
+          text = `Syncing: ${percent.toFixed(1)}%...`;
+        }
+        updateDataLoading(text);
+        dataLoading();
+      } else {
+        dataReady();
+      }
+      await getStatusDoc(replica, statusPath);
+      await renderJournal(replica);
+      renderReport(replica, year, weekNumber);
+    } catch (error) {
+      dataReady();
+      // @TODO Try to reconnect?
+      if (error === "Websocket error") {
+        console.log("Websocket error", "should try to reconnect...");
+      }
+      dataError(true);
+      console.error(error);
+    }
+  });
+};
+
+/**
+ * 
+ * @returns 
  */
 const main = () => {
   const formEl = document.getElementById("settings");
@@ -304,170 +526,7 @@ const main = () => {
 
   let replica = initReplica();
 
-  /**
-   * Gets the "status" doc from the replica
-   */
-  const getStatusDoc = async (replica) => {
-    const replicaStatus = await replica.getLatestDocAtPath(statusPath);
-    if (replicaStatus) {
-      renderStatus(replicaStatus?.text);
-    }
-  };
-
-  const rtStatus = async (cache) => {
-    const cacheStatus = await cache.getLatestDocAtPath(statusPath);
-    if (cacheStatus) {
-      renderStatus(cacheStatus?.text);
-    }
-  };
-
-  /**
-   * Fetches the report as an attachment from the Earthstar DB
-   * @param {*} replica
-   * @param {*} year
-   * @param {*} week
-   * @returns
-   */
-  const getReport = async (replica, year, week) => {
-    const doc = await replica.getLatestDocAtPath(
-      `/timekeeper/1.0/entries/reports/${year}/${week}/report.json`,
-    );
-    if (!doc || Earthstar.isErr(doc)) {
-      //throw new Error('No report available!');
-      console.error("No report available");
-      return;
-    }
-    console.log("doc", doc);
-    console.log("attachmentSize", doc.attachmentSize);
-    const attachment = await replica.getAttachment(doc);
-    const report = new TextDecoder().decode(await attachment.bytes());
-    return JSON.parse(report);
-  };
-
-  /**
-   * Basis for being able to display my timekeeper entries
-   * @param {*} year
-   * @param {*} week
-   */
-  const renderReport = async (year, week) => {
-    const theReport = await getReport(replica, year, week);
-    if (!theReport) {
-      return;
-    }
-    console.log("theReport", theReport);
-    const entriesyearweekEl = document.getElementById("entriesyearweek");
-    entriesyearweekEl.innerText = `For week ${theReport.currentWeekId}`;
-  };
-
-  const initCache = (replica) => {
-    // Load the data from the replica and write to the doc
-    // The cache allows us to listen to updates to the replica, adding the reactivity aspects we need
-    const cache = new Earthstar.ReplicaCache(replica);
-    // Whenever the replica is updated, this gets called and we update the log
-    cache.onCacheUpdated(async () => {
-      console.log("cache.onCacheUpdated");
-      await rtStatus();
-    });
-  };
-
   initCache(replica);
-
-  const initPeerSyncer = (replica) => {
-    const LIVE = true;
-    /**
-     * Syncs with a remote replica so that we can get updates from other internet-enabled replicas
-     */
-    const peer = new Earthstar.Peer();
-    peer.addReplica(replica);
-
-    // console.log('peer', peer);
-    // The 'live' argument keeps a persistent connection that will update the replica
-    //  whenever changes are detected from the remote replica
-    return peer.sync(THESERVER, LIVE);
-  };
-
-  const checkSyncerPartner = async (syncer) => {
-    const partner = syncer.partner;
-    console.log("partner.isSecure", partner.isSecure);
-  };
-
-  const syncerOnStatusChange = (syncer) => {
-    console.log("syncerOnStatusChange", syncer);
-    checkSyncerPartner(syncer);
-
-    syncer.onStatusChange(async (newStatus) => {
-      dataError(false);
-      console.log("syncer.onStatusChange", newStatus);
-
-      let allRequestedDocs = 0;
-      let allReceivedDocs = 0;
-      let allSentDocs = 0;
-      let transfersInProgress = 0;
-      let docsStatus;
-
-      try {
-        for (const share in newStatus) {
-          console.log("status update on share", share);
-          const shareStatus = newStatus[share];
-          allRequestedDocs += shareStatus.docs.requestedCount;
-          allReceivedDocs += shareStatus.docs.receivedCount;
-          allSentDocs += shareStatus.docs.sentCount;
-          docsStatus = shareStatus.docs.status;
-          console.log("docsStatus", docsStatus);
-
-          const transfersWaiting = shareStatus.attachments.filter(
-            (transfer) => {
-              return transfer.status === "ready" ||
-                transfer.status === "in_progress";
-            },
-          );
-          transfersInProgress += transfersWaiting.length;
-
-          if (docsStatus === "aborted" && transfersInProgress === 0) {
-            console.log(
-              "Websocket aborted?",
-              "transfersInProgress",
-              transfersInProgress,
-            );
-            await replica.close(false);
-            console.log("closed replica?", replica.isClosed());
-            // @TODO simply call init() again?
-            replica = initReplica();
-            syncer = initPeerSyncer(replica);
-            syncerOnStatusChange(syncer);
-          }
-        }
-        console.log(
-          `Syncing ${
-            Object.keys(newStatus).length
-          } shares, got ${allReceivedDocs}/${allRequestedDocs}, sent ${allSentDocs}, ${transfersInProgress} attachment transfers in progress.`,
-        );
-
-        if (allReceivedDocs < allRequestedDocs) {
-          let text = `Status: ${docsStatus} ${allRequestedDocs} docs...`;
-          if (allReceivedDocs > 0 && docsStatus === "gossiping") {
-            const percent = allReceivedDocs / allRequestedDocs * 100;
-            text = `Syncing: ${percent.toFixed(1)}%...`;
-          }
-          updateDataLoading(text);
-          dataLoading();
-        } else {
-          dataReady();
-        }
-        await getStatusDoc(replica);
-        await renderJournal(replica);
-        renderReport(2023, 40);
-      } catch (error) {
-        dataReady();
-        // @TODO Try to reconnect?
-        if (error === "Websocket error") {
-          console.log("Websocket error", "should try to reconnect...");
-        }
-        dataError(true);
-        console.error(error);
-      }
-    });
-  };
 
   /*
       Allows for creating reports for different weeks.
@@ -475,8 +534,6 @@ const main = () => {
       Might add a pagination system, or a filter at some point for the "journal" too.
   */
   const urlSearchParams = new URLSearchParams(window.location.search);
-  // const params = Object.fromEntries(urlSearchParams.entries());
-  console.log('urlSearchParams', urlSearchParams);
 
   const _year = urlSearchParams.get('year');
   const _week = urlSearchParams.get('week');
@@ -484,19 +541,25 @@ const main = () => {
   const year = parseInt(_year, 10) || 2023;
   const week = parseInt(_week, 10) || 40;
 
+  const params = { year, week, statusPath };
+
   /**
-   * Initial sync
+   * 
+   * @param {*} replica 
+   * @param {*} server 
+   * @param {*} params
    */
-  const init = async (year, week) => {
-    
-    const syncer = initPeerSyncer(replica);
+  const init = async (replica, server, params) => {
+    const { year, week, statusPath } = params;
 
-    syncerOnStatusChange(syncer);
+    const syncer = initPeerSyncer(replica, server);
 
-    await getStatusDoc(replica);
+    syncerOnStatusChange(syncer, replica, params);
+
+    await getStatusDoc(replica, statusPath);
     await renderJournal(replica);
 
-    renderReport(year, week);
+    renderReport(replica, year, week);
 
     dataReady();
 
@@ -507,7 +570,7 @@ const main = () => {
     await replica.close(false);
   };
 
-  init(year, week);
+  init(replica, THESERVER, params);
 
 };
 
