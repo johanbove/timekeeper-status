@@ -206,6 +206,9 @@ const setup = () => {
   });
 };
 
+/**
+ *
+ */
 const saveSettings = (form) => {
   let author;
   let share;
@@ -466,10 +469,26 @@ const main = () => {
     });
   };
 
+  /*
+      Allows for creating reports for different weeks.
+      Does not influence the "journal" yet.
+      Might add a pagination system, or a filter at some point for the "journal" too.
+  */
+  const urlSearchParams = new URLSearchParams(window.location.search);
+  // const params = Object.fromEntries(urlSearchParams.entries());
+  console.log('urlSearchParams', urlSearchParams);
+
+  const _year = urlSearchParams.get('year');
+  const _week = urlSearchParams.get('week');
+
+  const year = parseInt(_year, 10) || 2023;
+  const week = parseInt(_week, 10) || 40;
+
   /**
    * Initial sync
    */
-  const init = async () => {
+  const init = async (year, week) => {
+    
     const syncer = initPeerSyncer(replica);
 
     syncerOnStatusChange(syncer);
@@ -477,7 +496,7 @@ const main = () => {
     await getStatusDoc(replica);
     await renderJournal(replica);
 
-    renderReport(2023, 40);
+    renderReport(year, week);
 
     dataReady();
 
@@ -488,7 +507,8 @@ const main = () => {
     await replica.close(false);
   };
 
-  init();
+  init(year, week);
+
 };
 
 main();
