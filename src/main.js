@@ -400,7 +400,7 @@ const checkSyncerPartner = async (syncer) => {
  * @param {*} replica 
  */
 const syncerOnStatusChange = (syncer, replica, params) => {
-  const { weekNumber, year, statusPath } = params;
+  const { weekNumber, year, statusPath, server, share } = params;
   console.log("syncerOnStatusChange", syncer);
   checkSyncerPartner(syncer);
 
@@ -441,8 +441,8 @@ const syncerOnStatusChange = (syncer, replica, params) => {
           await replica.close(false);
           console.log("closed replica?", replica.isClosed());
           // @TODO simply call init() again?
-          replica = initReplica();
-          syncer = initPeerSyncer(replica, THESERVER);
+          replica = initReplica(share);
+          syncer = initPeerSyncer(replica, server);
           syncerOnStatusChange(syncer, replica, params);
         }
       }
@@ -474,6 +474,22 @@ const syncerOnStatusChange = (syncer, replica, params) => {
       dataError(true);
       console.error(error);
     }
+  });
+};
+
+/**
+ * 
+ * @param {*} share 
+ * @returns 
+ */
+const initReplica = (share) => {
+  console.log("init a replica", share);
+  /**
+   * Creates the replica, which stores the documents and allows us to query them
+   */
+  return new Earthstar.Replica({
+    driver: new Earthstar.ReplicaDriverWeb(share),
+    // shareSecret, // Not given as this is READONLY!
   });
 };
 
@@ -513,18 +529,7 @@ const main = () => {
   const THESHARE = settings.shares[SHARE_INDEX];
   const THESERVER = settings.servers[SERVER_INDEX];
 
-  const initReplica = () => {
-    console.log("init a replica", THESHARE);
-    /**
-     * Creates the replica, which stores the documents and allows us to query them
-     */
-    return new Earthstar.Replica({
-      driver: new Earthstar.ReplicaDriverWeb(THESHARE),
-      // shareSecret, // Not given as this is READONLY!
-    });
-  };
-
-  let replica = initReplica();
+  let replica = initReplica(THESHARE);
 
   initCache(replica);
 
@@ -539,9 +544,9 @@ const main = () => {
   const _week = urlSearchParams.get('week');
 
   const year = parseInt(_year, 10) || 2023;
-  const week = parseInt(_week, 10) || 40;
+  const week = parseInt(_week, 10) || 41;
 
-  const params = { year, week, statusPath };
+  const params = { year, week, statusPath, share: THESHARE, server: THESERVER };
 
   /**
    * 
@@ -549,8 +554,8 @@ const main = () => {
    * @param {*} server 
    * @param {*} params
    */
-  const init = async (replica, server, params) => {
-    const { year, week, statusPath } = params;
+  const init = async (replica, params) => {
+    const { year, week, statusPath, server } = params;
 
     const syncer = initPeerSyncer(replica, server);
 
@@ -570,7 +575,7 @@ const main = () => {
     await replica.close(false);
   };
 
-  init(replica, THESERVER, params);
+  init(replica, params);
 
 };
 
